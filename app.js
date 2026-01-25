@@ -195,6 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const rowRight = document.createElement('div');
         rowRight.className = 'diff-row diff-row-changed';
 
+        // Determine the type for navigation/minimap
+        let rowType = 'modified';
+        if (removedText && !addedText) rowType = 'removed';
+        else if (!removedText && addedText) rowType = 'added';
+
         if (removedText && addedText) {
             // Both sides have content - do word-level diff
             const wordDiff = Diff.diffWords(removedText, addedText);
@@ -205,13 +210,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     span.className = 'diff-removed';
                     span.textContent = part.value;
                     rowLeft.appendChild(span);
-                    diffElements.push({ element: span, type: 'removed' });
                 } else if (part.added) {
                     const span = document.createElement('span');
                     span.className = 'diff-added';
                     span.textContent = part.value;
                     rowRight.appendChild(span);
-                    diffElements.push({ element: span, type: 'added' });
                 } else {
                     // Unchanged words - show in both
                     const spanLeft = document.createElement('span');
@@ -229,18 +232,23 @@ document.addEventListener('DOMContentLoaded', () => {
             span.className = 'diff-removed';
             span.textContent = removedText;
             rowLeft.appendChild(span);
-            diffElements.push({ element: span, type: 'removed' });
         } else if (addedText) {
             // Only added (insertion)
             const span = document.createElement('span');
             span.className = 'diff-added';
             span.textContent = addedText;
             rowRight.appendChild(span);
-            diffElements.push({ element: span, type: 'added' });
         }
 
         diffLeft.appendChild(rowLeft);
         diffRight.appendChild(rowRight);
+
+        // Track at row level for navigation and minimap
+        diffElements.push({
+            leftRow: rowLeft,
+            rightRow: rowRight,
+            type: rowType
+        });
     }
 
     const minimap = document.getElementById('minimap');
@@ -262,13 +270,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
 
         diffElements.forEach(item => {
-            const { element, type } = item;
+            const { leftRow, type } = item;
 
-            const top = (element.offsetTop / scrollHeight) * 100;
-            const height = Math.max((element.offsetHeight / scrollHeight) * 100, 0.5);
+            const top = (leftRow.offsetTop / scrollHeight) * 100;
+            const height = Math.max((leftRow.offsetHeight / scrollHeight) * 100, 0.5);
 
             const marker = document.createElement('div');
-            marker.className = `minimap-marker ${type}`;
+            // Map 'modified' type to 'added' for color styling (or add a new CSS class)
+            const markerType = type === 'modified' ? 'added' : type;
+            marker.className = `minimap-marker ${markerType}`;
             marker.style.top = `${top}%`;
             marker.style.height = `${height}%`;
             minimapMarkers.appendChild(marker);
@@ -376,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function scrollToDiff(index) {
-        const target = diffElements[index].element;
+        const target = diffElements[index].leftRow;
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         // Highlight logic? maybe later.
