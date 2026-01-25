@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDiffMode = false;
 
     const syncScrollBtn = document.getElementById('sync-scroll');
+    const swapBtn = document.getElementById('swap-btn');
     const prevDiffBtn = document.getElementById('prev-diff');
     const nextDiffBtn = document.getElementById('next-diff');
     const diffCounter = document.getElementById('diff-counter');
@@ -107,8 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Use jsdiff to compute changes
-        // Switching to diffChars for true character-level diffs including newlines
-        const diff = Diff.diffWords(text1, text2);
+        const diff = Diff.diffWordsWithSpace(text1, text2);
 
         const leftFragment = document.createDocumentFragment();
         const rightFragment = document.createDocumentFragment();
@@ -275,6 +275,21 @@ document.addEventListener('DOMContentLoaded', () => {
     syncScrollBtn.addEventListener('click', () => {
         isSyncScrolling = !isSyncScrolling;
         syncScrollBtn.classList.toggle('active', isSyncScrolling);
+    });
+
+    swapBtn.addEventListener('click', () => {
+        const temp = inputLeft.value;
+        inputLeft.value = inputRight.value;
+        inputRight.value = temp;
+
+        // Trigger save and updates
+        inputLeft.dispatchEvent(new Event('input'));
+        inputRight.dispatchEvent(new Event('input'));
+
+        // If in diff mode, re-render
+        if (isDiffMode) {
+            renderDiff(inputLeft.value, inputRight.value);
+        }
     });
 
     prevDiffBtn.addEventListener('click', () => {
