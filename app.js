@@ -292,6 +292,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const copyLeftBtn = document.getElementById('copy-left');
+    const copyRightBtn = document.getElementById('copy-right');
+
+    const copyToClipboard = async (text, button) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy: ', err);
+            const originalText = button.textContent;
+            button.textContent = 'Error';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }
+    };
+
+    copyLeftBtn.addEventListener('click', () => {
+        copyToClipboard(inputLeft.value, copyLeftBtn);
+    });
+
+    copyRightBtn.addEventListener('click', () => {
+        copyToClipboard(inputRight.value, copyRightBtn);
+    });
+
     prevDiffBtn.addEventListener('click', () => {
         if (totalDiffs === 0) return;
         let newIndex = currentDiffIndex - 1;
