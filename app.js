@@ -114,54 +114,133 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Use jsdiff to compute changes
-        const diff = Diff.diffWordsWithSpace(text1, text2);
+        // Use line-based diff for structure
+        const lineDiff = Diff.diffLines(text1, text2);
 
-        const leftFragment = document.createDocumentFragment();
-        const rightFragment = document.createDocumentFragment();
+        // Group adjacent removed/added chunks for pairing
+        let i = 0;
+        while (i < lineDiff.length) {
+            const chunk = lineDiff[i];
 
-        diff.forEach(part => {
-            // part.added, part.removed, part.value
-
-            if (part.removed) {
-                // Show in left (red)
-                const span = document.createElement('span');
-                span.className = 'diff-removed';
-                span.textContent = part.value;
-                leftFragment.appendChild(span);
-                diffElements.push({ element: span, type: 'removed' });
-
-                // For side-by-side alignment, we technically should verify if there is an 'added' counterpart
-                // But for this simple implementation, we just skip displaying in right
-            } else if (part.added) {
-                // Show in right (green)
-                const span = document.createElement('span');
-                span.className = 'diff-added';
-                span.textContent = part.value;
-                rightFragment.appendChild(span);
-                diffElements.push({ element: span, type: 'added' });
+            if (!chunk.added && !chunk.removed) {
+                // Unchanged lines - render in both panes
+                renderUnchangedRow(chunk.value);
+                i++;
             } else {
-                // Common text
-                const spanLeft = document.createElement('span');
-                spanLeft.textContent = part.value;
-                leftFragment.appendChild(spanLeft);
+                // Collect consecutive removed and added chunks
+                let removedText = '';
+                let addedText = '';
 
-                const spanRight = document.createElement('span');
-                spanRight.textContent = part.value;
-                rightFragment.appendChild(spanRight);
+                while (i < lineDiff.length && lineDiff[i].removed) {
+                    removedText += lineDiff[i].value;
+                    i++;
+                }
+                while (i < lineDiff.length && lineDiff[i].added) {
+                    addedText += lineDiff[i].value;
+                    i++;
+                }
+
+                // Render the paired change with word-level highlighting
+                renderChangedRow(removedText, addedText);
             }
-        });
+        }
 
-        diffLeft.appendChild(leftFragment);
-        diffRight.appendChild(rightFragment);
-
-        // Group diffs? For now, list every span.
-        // Actually, adjacent spans might be annoying. But let's start with this.
         totalDiffs = diffElements.length;
         updateNavState();
 
-        // Update minimap with a slight delay to ensure layout is done
-        requestAnimationFrame(() => updateMinimap());
+        // Sync row heights and update minimap after layout
+        requestAnimationFrame(() => {
+            syncRowHeights();
+            updateMinimap();
+        });
+    }
+
+    function syncRowHeights() {
+        const leftRows = diffLeft.querySelectorAll('.diff-row');
+        const rightRows = diffRight.querySelectorAll('.diff-row');
+
+        const count = Math.min(leftRows.length, rightRows.length);
+        for (let i = 0; i < count; i++) {
+            // Reset heights first
+            leftRows[i].style.minHeight = '';
+            rightRows[i].style.minHeight = '';
+
+            // Get natural heights
+            const leftHeight = leftRows[i].offsetHeight;
+            const rightHeight = rightRows[i].offsetHeight;
+
+            // Set both to the max
+            const maxHeight = Math.max(leftHeight, rightHeight);
+            leftRows[i].style.minHeight = `${maxHeight}px`;
+            rightRows[i].style.minHeight = `${maxHeight}px`;
+        }
+    }
+
+    function renderUnchangedRow(text) {
+        const rowLeft = document.createElement('div');
+        rowLeft.className = 'diff-row';
+        rowLeft.textContent = text;
+        diffLeft.appendChild(rowLeft);
+
+        const rowRight = document.createElement('div');
+        rowRight.className = 'diff-row';
+        rowRight.textContent = text;
+        diffRight.appendChild(rowRight);
+    }
+
+    function renderChangedRow(removedText, addedText) {
+        const rowLeft = document.createElement('div');
+        rowLeft.className = 'diff-row diff-row-changed';
+
+        const rowRight = document.createElement('div');
+        rowRight.className = 'diff-row diff-row-changed';
+
+        if (removedText && addedText) {
+            // Both sides have content - do word-level diff
+            const wordDiff = Diff.diffWords(removedText, addedText);
+
+            wordDiff.forEach(part => {
+                if (part.removed) {
+                    const span = document.createElement('span');
+                    span.className = 'diff-removed';
+                    span.textContent = part.value;
+                    rowLeft.appendChild(span);
+                    diffElements.push({ element: span, type: 'removed' });
+                } else if (part.added) {
+                    const span = document.createElement('span');
+                    span.className = 'diff-added';
+                    span.textContent = part.value;
+                    rowRight.appendChild(span);
+                    diffElements.push({ element: span, type: 'added' });
+                } else {
+                    // Unchanged words - show in both
+                    const spanLeft = document.createElement('span');
+                    spanLeft.textContent = part.value;
+                    rowLeft.appendChild(spanLeft);
+
+                    const spanRight = document.createElement('span');
+                    spanRight.textContent = part.value;
+                    rowRight.appendChild(spanRight);
+                }
+            });
+        } else if (removedText) {
+            // Only removed (deletion)
+            const span = document.createElement('span');
+            span.className = 'diff-removed';
+            span.textContent = removedText;
+            rowLeft.appendChild(span);
+            diffElements.push({ element: span, type: 'removed' });
+        } else if (addedText) {
+            // Only added (insertion)
+            const span = document.createElement('span');
+            span.className = 'diff-added';
+            span.textContent = addedText;
+            rowRight.appendChild(span);
+            diffElements.push({ element: span, type: 'added' });
+        }
+
+        diffLeft.appendChild(rowLeft);
+        diffRight.appendChild(rowRight);
     }
 
     const minimap = document.getElementById('minimap');
