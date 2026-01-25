@@ -10,9 +10,11 @@
     --btn-secondary-bg: #21262d;
     --btn-secondary-hover: #30363d;
     --diff-add-bg: rgba(46, 160, 67, 0.15);
-    --diff-add-text: #e6ffec; /* Light green for text on dark bg */
+    --diff-add-text: #e6ffec;
+    /* Light green for text on dark bg */
     --diff-del-bg: rgba(248, 81, 73, 0.15);
-    --diff-del-text: #ffcecb; /* Light red for text on dark bg */
+    --diff-del-text: #ffcecb;
+    /* Light red for text on dark bg */
     --font-ui: 'Inter', sans-serif;
     --font-code: 'JetBrains Mono', monospace;
 }
@@ -116,7 +118,7 @@ header h1 {
 
 .pane-content {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     position: relative;
     background-color: var(--pane-bg);
 }
@@ -136,6 +138,8 @@ textarea {
 }
 
 .diff-mode {
+    overflow: auto;
+    /* Only scroll in diff mode */
     padding: 1rem;
     font-family: var(--font-code);
     font-size: 14px;
@@ -152,14 +156,14 @@ textarea {
 .diff-added {
     background-color: var(--diff-add-bg);
     color: var(--diff-add-text);
-    display: inline-block;
+    display: inline;
 }
 
 .diff-removed {
     background-color: var(--diff-del-bg);
     color: var(--diff-del-text);
-    display: inline-block;
-    text-decoration: line-through; /* Optional: Strikethrough for removed */
+    display: inline;
+    text-decoration: line-through;
 }
 
 /* Drag Overlay Styling (Applied via JS) */

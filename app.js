@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!text1 && !text2) return;
 
         // Use jsdiff to compute changes
-        const diff = Diff.diffWordsWithSpace(text1, text2);
+        const diff = Diff.diffChars(text1, text2);
 
         const leftFragment = document.createDocumentFragment();
         const rightFragment = document.createDocumentFragment();
