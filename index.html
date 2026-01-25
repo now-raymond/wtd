@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +8,25 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/7.0.0/diff.min.js"></script>
 </head>
+
 <body>
     <div class="app-container">
         <header>
             <h1>What's the Diff</h1>
             <div class="actions">
+                <div class="nav-controls hidden" id="nav-controls">
+                    <span id="diff-counter">0/0</span>
+                    <button id="prev-diff" class="btn secondary" title="Previous Change">▲</button>
+                    <button id="next-diff" class="btn secondary" title="Next Change">▼</button>
+                </div>
+                <button id="sync-scroll" class="btn secondary active" title="Toggle Synchronized Scrolling">Sync
+                    Scroll</button>
+                <div class="separator"></div>
                 <button id="mode-toggle" class="btn primary">View Diff</button>
                 <button id="clear-btn" class="btn secondary">Clear All</button>
             </div>
@@ -37,11 +49,12 @@
                 <div class="pane-content diff-mode hidden" id="diff-right"></div>
             </div>
         </main>
-        
+
         <footer>
             <p>Powered by jsdiff. Client-side only.</p>
         </footer>
     </div>
     <script src="app.js"></script>
 </body>
+
 </html>

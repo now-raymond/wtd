@@ -90,6 +90,36 @@ header h1 {
     background-color: var(--btn-secondary-hover);
 }
 
+.btn.active {
+    background-color: var(--btn-primary-bg);
+    border-color: rgba(240, 246, 252, 0.1);
+    color: white;
+}
+
+.btn.active:hover {
+    background-color: var(--btn-primary-hover);
+}
+
+.separator {
+    width: 1px;
+    background-color: var(--border-color);
+    margin: 0 0.5rem;
+}
+
+.nav-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-right: 0.5rem;
+}
+
+#diff-counter {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    margin-right: 0.5rem;
+    font-variant-numeric: tabular-nums;
+}
+
 .split-view {
     flex: 1;
     display: flex;
