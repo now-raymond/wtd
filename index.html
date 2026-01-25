@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What's the Diff</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/7.0.0/diff.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>What's the Diff</h1>
+            <div class="actions">
+                <button id="mode-toggle" class="btn primary">View Diff</button>
+                <button id="clear-btn" class="btn secondary">Clear All</button>
+            </div>
+        </header>
+
+        <main class="split-view">
+            <div class="pane left-pane" id="pane-left">
+                <div class="pane-header">Original (Drag file here)</div>
+                <div class="pane-content editor-mode">
+                    <textarea id="input-left" placeholder="Paste text or drop a file..."></textarea>
+                </div>
+                <div class="pane-content diff-mode hidden" id="diff-left"></div>
+            </div>
+
+            <div class="pane right-pane" id="pane-right">
+                <div class="pane-header">Modified (Drag file here)</div>
+                <div class="pane-content editor-mode">
+                    <textarea id="input-right" placeholder="Paste text or drop a file..."></textarea>
+                </div>
+                <div class="pane-content diff-mode hidden" id="diff-right"></div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Powered by jsdiff. Client-side only.</p>
+        </footer>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
