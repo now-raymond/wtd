@@ -1,0 +1,65 @@
+/* Minimap */
+.minimap {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 16px;
+    height: 100%;
+    background-color: var(--header-bg);
+    border-left: 1px solid var(--border-color);
+    z-index: 100;
+    cursor: pointer;
+    display: none;
+    /* Hidden by default, shown in diff mode */
+}
+
+/* Show minimap when in diff mode */
+.split-view.diff-active .minimap {
+    display: block;
+}
+
+/* Adjust split view when minimap is visible */
+.split-view.diff-active .pane {
+    /* Slightly reduce pane width to accommodate minimap to prevent horizontal scroll */
+    max-width: calc(50% - 8px);
+}
+
+.minimap-marker {
+    position: absolute;
+    width: 100%;
+    left: 0;
+    pointer-events: none;
+    /* Allow clicks to pass through to minimap for scrolling */
+}
+
+.minimap-marker.added {
+    background-color: #238636;
+    /* Bright green for visibility */
+    opacity: 0.8;
+}
+
+.minimap-marker.removed {
+    background-color: #da3633;
+    /* Bright red for visibility */
+    opacity: 0.8;
+}
+
+.minimap-viewport {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-right: none;
+    border-left: none;
+    /* Only top/bottom borders usually look best or full box */
+    pointer-events: auto;
+    /* Allow dragging */
+    cursor: grab;
+    transition: top 0.05s;
+    z-index: 10;
+}
+
+.minimap:hover .minimap-viewport {
+    background-color: rgba(255, 255, 255, 0.15);
+}

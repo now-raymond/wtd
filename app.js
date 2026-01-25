@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function toggleMode() {
+        const splitView = document.querySelector('.split-view');
         if (!isDiffMode) {
             // Switch to Diff View
             const leftText = inputLeft.value;
@@ -73,6 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
             diffLeft.classList.remove('hidden');
             diffRight.classList.remove('hidden');
             navControls.classList.remove('hidden');
+
+            // Show minimap
+            splitView.classList.add('diff-active');
 
             modeToggle.textContent = 'Edit Text';
             modeToggle.classList.remove('primary');
@@ -87,6 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
             diffLeft.classList.add('hidden');
             diffRight.classList.add('hidden');
             navControls.classList.add('hidden');
+
+            // Hide minimap
+            splitView.classList.remove('diff-active');
 
             modeToggle.textContent = 'View Diff';
             modeToggle.classList.remove('secondary');
@@ -152,7 +159,128 @@ document.addEventListener('DOMContentLoaded', () => {
         // Actually, adjacent spans might be annoying. But let's start with this.
         totalDiffs = diffElements.length;
         updateNavState();
+
+        // Update minimap with a slight delay to ensure layout is done
+        requestAnimationFrame(() => updateMinimap());
     }
+
+    const minimap = document.getElementById('minimap');
+
+    // Create persistent minimap structure
+    const minimapMarkers = document.createElement('div');
+    minimapMarkers.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;';
+    minimap.appendChild(minimapMarkers);
+
+    const minimapViewport = document.createElement('div');
+    minimapViewport.className = 'minimap-viewport';
+    minimap.appendChild(minimapViewport);
+
+    function updateMinimap() {
+        minimapMarkers.innerHTML = '';
+        if (!diffElements.length) return;
+
+        // Calculate max scroll height to normalize positions
+        const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
+
+        diffElements.forEach(item => {
+            const { element, type } = item;
+
+            const top = (element.offsetTop / scrollHeight) * 100;
+            const height = Math.max((element.offsetHeight / scrollHeight) * 100, 0.5);
+
+            const marker = document.createElement('div');
+            marker.className = `minimap-marker ${type}`;
+            marker.style.top = `${top}%`;
+            marker.style.height = `${height}%`;
+            minimapMarkers.appendChild(marker);
+        });
+
+        updateMinimapViewport();
+    }
+
+    function updateMinimapViewport() {
+        if (!minimapViewport || !isDiffMode) return;
+
+        const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
+        const clientHeight = diffLeft.clientHeight;
+        const scrollTop = diffLeft.scrollTop;
+
+        // Avoid division by zero
+        if (scrollHeight === 0) return;
+
+        const topPercent = (scrollTop / scrollHeight) * 100;
+        const heightPercent = (clientHeight / scrollHeight) * 100;
+
+        minimapViewport.style.top = `${topPercent}%`;
+        minimapViewport.style.height = `${heightPercent}%`;
+    }
+
+    // Handle Minimap Clicks
+    minimap.addEventListener('click', (e) => {
+        // Ignore if we were dragging
+        if (e.target === minimapViewport) return;
+
+        const rect = minimap.getBoundingClientRect();
+        const clickY = e.clientY - rect.top;
+        const percentage = clickY / rect.height;
+
+        const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
+        const targetScroll = percentage * scrollHeight;
+
+        // Center the view on the click
+        const viewHeight = diffLeft.clientHeight;
+
+        diffLeft.scrollTop = targetScroll - (viewHeight / 2);
+        diffRight.scrollTop = targetScroll - (viewHeight / 2);
+    });
+
+    // Drag-to-scroll on minimap viewport
+    let isDragging = false;
+    let dragStartY = 0;
+    let dragStartScrollTop = 0;
+
+    minimapViewport.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragStartY = e.clientY;
+        dragStartScrollTop = diffLeft.scrollTop;
+        minimapViewport.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const rect = minimap.getBoundingClientRect();
+        const deltaY = e.clientY - dragStartY;
+        const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
+
+        // Convert pixel movement on minimap to scroll movement
+        const scrollDelta = (deltaY / rect.height) * scrollHeight;
+
+        diffLeft.scrollTop = dragStartScrollTop + scrollDelta;
+        diffRight.scrollTop = dragStartScrollTop + scrollDelta;
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            minimapViewport.style.cursor = 'grab';
+        }
+    });
+
+    // Update viewport on scroll
+    diffLeft.addEventListener('scroll', () => {
+        if (isDiffMode) requestAnimationFrame(updateMinimapViewport);
+    });
+
+    // Update minimap on resize
+    window.addEventListener('resize', () => {
+        if (isDiffMode) {
+            // Debounce slightly proper
+            if (window.minimapTimeout) clearTimeout(window.minimapTimeout);
+            window.minimapTimeout = setTimeout(updateMinimap, 100);
+        }
+    });
 
     function updateNavState() {
         if (totalDiffs === 0) {
