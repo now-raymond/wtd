@@ -23,7 +23,42 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSyncingLeft = false;
     let isSyncingRight = false;
 
+    // Initialize Turndown service
+    const turndownService = new TurndownService({
+        headingStyle: 'atx',
+        codeBlockStyle: 'fenced'
+    });
+
     // --- Core Logic ---
+
+    // Paste handler for HTML to Markdown conversion
+    function handlePaste(e) {
+        const clipboardData = e.clipboardData || window.clipboardData;
+        if (!clipboardData) return;
+
+        // Check if there is HTML content
+        const html = clipboardData.getData('text/html');
+        if (html) {
+            e.preventDefault();
+            // Convert HTML to Markdown
+            const markdown = turndownService.turndown(html);
+
+            // Insert data
+            const textarea = e.target;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+
+            textarea.value = text.substring(0, start) + markdown + text.substring(end);
+
+            // Move cursor
+            textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+
+            // Trigger input for saving/UI
+            textarea.dispatchEvent(new Event('input'));
+            saveToStorage();
+        }
+    }
 
     function toggleMode() {
         if (!isDiffMode) {
@@ -73,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Use jsdiff to compute changes
         // Switching to diffChars for true character-level diffs including newlines
-        const diff = Diff.diffChars(text1, text2);
+        const diff = Diff.diffWords(text1, text2);
 
         const leftFragment = document.createDocumentFragment();
         const rightFragment = document.createDocumentFragment();
@@ -232,6 +267,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Save on input changes
     inputLeft.addEventListener('input', saveToStorage);
     inputRight.addEventListener('input', saveToStorage);
+
+    // Paste logic
+    inputLeft.addEventListener('paste', handlePaste);
+    inputRight.addEventListener('paste', handlePaste);
 
     syncScrollBtn.addEventListener('click', () => {
         isSyncScrolling = !isSyncScrolling;
