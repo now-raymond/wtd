@@ -276,9 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const height = Math.max((leftRow.offsetHeight / scrollHeight) * 100, 0.5);
 
             const marker = document.createElement('div');
-            // Map 'modified' type to 'added' for color styling (or add a new CSS class)
-            const markerType = type === 'modified' ? 'added' : type;
-            marker.className = `minimap-marker ${markerType}`;
+            marker.className = `minimap-marker ${type}`;
             marker.style.top = `${top}%`;
             marker.style.height = `${height}%`;
             minimapMarkers.appendChild(marker);
