@@ -201,8 +201,22 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (!removedText && addedText) rowType = 'added';
 
         if (removedText && addedText) {
-            // Both sides have content - do word-level diff
-            const wordDiff = Diff.diffWords(removedText, addedText);
+            // diffLines() includes trailing newlines in each line's value.
+            // Strip them before word-level diffing to keep all content on one visual row.
+            const cleanRemoved = removedText.replace(/\n+$/, '');
+            const cleanAdded = addedText.replace(/\n+$/, '');
+            const wordDiff = Diff.diffWords(cleanRemoved, cleanAdded);
+
+            // Determine fine-grained rowType based on word diff results
+            const hasRemovedWords = wordDiff.some(part => part.removed);
+            const hasAddedWords = wordDiff.some(part => part.added);
+            if (hasRemovedWords && hasAddedWords) {
+                rowType = 'modified';
+            } else if (hasRemovedWords) {
+                rowType = 'removed';
+            } else if (hasAddedWords) {
+                rowType = 'added';
+            }
 
             wordDiff.forEach(part => {
                 if (part.removed) {
