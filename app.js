@@ -63,6 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function toggleMode() {
         const splitView = document.querySelector('.split-view');
+        const editOption = modeToggle.querySelector('[data-mode="edit"]');
+        const diffOption = modeToggle.querySelector('[data-mode="diff"]');
+
         if (!isDiffMode) {
             // Switch to Diff View
             const leftText = inputLeft.value;
@@ -78,9 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show minimap
             splitView.classList.add('diff-active');
 
-            modeToggle.textContent = 'Edit Text';
-            modeToggle.classList.remove('primary');
-            modeToggle.classList.add('secondary');
+            // Update switch state
+            modeToggle.classList.add('diff-active');
+            editOption.classList.remove('active');
+            diffOption.classList.add('active');
 
             // Initial nav update
             updateNavState();
@@ -95,9 +99,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Hide minimap
             splitView.classList.remove('diff-active');
 
-            modeToggle.textContent = 'View Diff';
-            modeToggle.classList.remove('secondary');
-            modeToggle.classList.add('primary');
+            // Update switch state
+            modeToggle.classList.remove('diff-active');
+            editOption.classList.add('active');
+            diffOption.classList.remove('active');
         }
         isDiffMode = !isDiffMode;
     }
@@ -501,9 +506,8 @@ document.addEventListener('DOMContentLoaded', () => {
     inputLeft.addEventListener('paste', handlePaste);
     inputRight.addEventListener('paste', handlePaste);
 
-    syncScrollBtn.addEventListener('click', () => {
-        isSyncScrolling = !isSyncScrolling;
-        syncScrollBtn.classList.toggle('active', isSyncScrolling);
+    syncScrollBtn.addEventListener('change', () => {
+        isSyncScrolling = syncScrollBtn.checked;
     });
 
     swapBtn.addEventListener('click', () => {

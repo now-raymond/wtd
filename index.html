@@ -26,11 +26,18 @@
                     <button id="prev-diff" class="btn secondary" title="Previous Change">▲</button>
                     <button id="next-diff" class="btn secondary" title="Next Change">▼</button>
                 </div>
-                <button id="sync-scroll" class="btn secondary active" title="Toggle Synchronized Scrolling">Sync
-                    Scroll</button>
+                <label class="checkbox-label" title="Toggle Synchronized Scrolling">
+                    <input type="checkbox" id="sync-scroll" checked>
+                    <span class="checkbox-box"></span>
+                    Sync Scroll
+                </label>
                 <button id="swap-btn" class="btn secondary" title="Swap Left and Right">⇄ Swap</button>
                 <div class="separator"></div>
-                <button id="mode-toggle" class="btn primary">View Diff</button>
+                <div class="mode-switch" id="mode-toggle">
+                    <span class="mode-option active" data-mode="edit">Edit Text</span>
+                    <span class="mode-option" data-mode="diff">View Diff</span>
+                    <div class="mode-slider"></div>
+                </div>
                 <button id="clear-btn" class="btn secondary">Clear All</button>
             </div>
         </header>
