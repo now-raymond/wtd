@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settings-modal');
     const settingsClose = document.getElementById('settings-close');
     const pasteMarkdownCheckbox = document.getElementById('setting-paste-markdown');
-    let pasteAsMarkdown = true;
+    let pasteAsMarkdown = false;
 
     // Initialize Turndown service
     const turndownService = new TurndownService({
