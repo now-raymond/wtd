@@ -24,6 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSyncingLeft = false;
     let isSyncingRight = false;
 
+    // Settings
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const settingsClose = document.getElementById('settings-close');
+    const pasteMarkdownCheckbox = document.getElementById('setting-paste-markdown');
+    let pasteAsMarkdown = true;
+
     // Initialize Turndown service
     const turndownService = new TurndownService({
         headingStyle: 'atx',
@@ -34,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Paste handler for HTML to Markdown conversion
     function handlePaste(e) {
+        // Skip if setting is disabled
+        if (!pasteAsMarkdown) return;
+
         const clipboardData = e.clipboardData || window.clipboardData;
         if (!clipboardData) return;
 
@@ -58,6 +68,28 @@ document.addEventListener('DOMContentLoaded', () => {
             // Trigger input for saving/UI
             textarea.dispatchEvent(new Event('input'));
             saveToStorage();
+        }
+    }
+
+    // --- Settings Modal ---
+
+    function openSettings() {
+        settingsModal.classList.remove('hidden');
+    }
+
+    function closeSettings() {
+        settingsModal.classList.add('hidden');
+    }
+
+    function saveSettings() {
+        localStorage.setItem('wtd_paste_markdown', pasteAsMarkdown);
+    }
+
+    function loadSettings() {
+        const stored = localStorage.getItem('wtd_paste_markdown');
+        if (stored !== null) {
+            pasteAsMarkdown = stored === 'true';
+            pasteMarkdownCheckbox.checked = pasteAsMarkdown;
         }
     }
 
@@ -495,6 +527,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load saved data
     loadFromStorage();
+    loadSettings();
+
+    // Settings modal handlers
+    settingsBtn.addEventListener('click', openSettings);
+    settingsClose.addEventListener('click', closeSettings);
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) closeSettings();
+    });
+    pasteMarkdownCheckbox.addEventListener('change', () => {
+        pasteAsMarkdown = pasteMarkdownCheckbox.checked;
+        saveSettings();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !settingsModal.classList.contains('hidden')) {
+            closeSettings();
+        }
+    });
 
     modeToggle.addEventListener('click', toggleMode);
     clearBtn.addEventListener('click', () => {
@@ -534,21 +583,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyRightBtn = document.getElementById('copy-right');
 
     const copyToClipboard = async (text, button) => {
+        button.disabled = true;
+
         try {
             await navigator.clipboard.writeText(text);
-            const originalText = button.textContent;
             button.textContent = 'Copied!';
-            setTimeout(() => {
-                button.textContent = originalText;
-            }, 2000);
         } catch (err) {
             console.error('Failed to copy: ', err);
-            const originalText = button.textContent;
             button.textContent = 'Error';
-            setTimeout(() => {
-                button.textContent = originalText;
-            }, 2000);
         }
+
+        setTimeout(() => {
+            button.textContent = 'Copy';
+            button.disabled = false;
+        }, 2000);
     };
 
     copyLeftBtn.addEventListener('click', () => {
