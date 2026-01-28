@@ -456,6 +456,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 reader.onload = (event) => {
                     inputElement.value = event.target.result;
                     saveToStorage(); // Save after drop
+
+                    // Re-diff if in diff mode
+                    if (isDiffMode) {
+                        renderDiff(inputLeft.value, inputRight.value);
+                    }
                 };
                 reader.readAsText(file);
             }
