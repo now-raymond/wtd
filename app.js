@@ -56,19 +56,23 @@ document.addEventListener('DOMContentLoaded', () => {
             // Convert HTML to Markdown
             const markdown = turndownService.turndown(html);
 
-            // Insert data
-            const textarea = e.target;
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const text = textarea.value;
+            // Use execCommand to preserve undo stack (Ctrl+Z support)
+            document.execCommand('insertText', false, markdown);
 
-            textarea.value = text.substring(0, start) + markdown + text.substring(end);
+            // Previous implementation (breaks undo):
+            // const textarea = e.target;
+            // const start = textarea.selectionStart;
+            // const end = textarea.selectionEnd;
+            // const text = textarea.value;
 
-            // Move cursor
-            textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+            // textarea.value = text.substring(0, start) + markdown + text.substring(end);
 
-            // Trigger input for saving/UI
-            textarea.dispatchEvent(new Event('input'));
+            // // Move cursor
+            // textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+
+            // // Trigger input for saving/UI
+            // textarea.dispatchEvent(new Event('input'));
+
             saveToStorage();
         }
     }
