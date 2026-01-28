@@ -14,6 +14,7 @@
         rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/7.0.0/diff.min.js"></script>
     <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
 <body>
@@ -81,9 +82,14 @@
                 </div>
                 <div class="modal-content">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="setting-paste-markdown" checked>
+                        <input type="checkbox" id="setting-paste-markdown">
                         <span class="checkbox-box"></span>
                         Paste rich text as Markdown
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="setting-copy-richtext">
+                        <span class="checkbox-box"></span>
+                        Copy Markdown as rich text
                     </label>
                     <p class="setting-description">When enabled, pasted rich text (from web pages, Word, etc.) will be
                         converted to Markdown. When disabled, only plain text is used.</p>

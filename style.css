@@ -407,6 +407,9 @@ footer {
 
 .modal-content {
     padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .setting-description {

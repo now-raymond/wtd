@@ -29,7 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settings-modal');
     const settingsClose = document.getElementById('settings-close');
     const pasteMarkdownCheckbox = document.getElementById('setting-paste-markdown');
+    const copyRichtextCheckbox = document.getElementById('setting-copy-richtext');
     let pasteAsMarkdown = false;
+    let copyAsRichText = false;
 
     // Initialize Turndown service
     const turndownService = new TurndownService({
@@ -83,13 +85,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveSettings() {
         localStorage.setItem('wtd_paste_markdown', pasteAsMarkdown);
+        localStorage.setItem('wtd_copy_richtext', copyAsRichText);
     }
 
     function loadSettings() {
-        const stored = localStorage.getItem('wtd_paste_markdown');
-        if (stored !== null) {
-            pasteAsMarkdown = stored === 'true';
+        const storedPaste = localStorage.getItem('wtd_paste_markdown');
+        if (storedPaste !== null) {
+            pasteAsMarkdown = storedPaste === 'true';
             pasteMarkdownCheckbox.checked = pasteAsMarkdown;
+        }
+        const storedCopy = localStorage.getItem('wtd_copy_richtext');
+        if (storedCopy !== null) {
+            copyAsRichText = storedCopy === 'true';
+            copyRichtextCheckbox.checked = copyAsRichText;
         }
     }
 
@@ -539,6 +547,10 @@ document.addEventListener('DOMContentLoaded', () => {
         pasteAsMarkdown = pasteMarkdownCheckbox.checked;
         saveSettings();
     });
+    copyRichtextCheckbox.addEventListener('change', () => {
+        copyAsRichText = copyRichtextCheckbox.checked;
+        saveSettings();
+    });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !settingsModal.classList.contains('hidden')) {
             closeSettings();
@@ -559,6 +571,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Paste logic
     inputLeft.addEventListener('paste', handlePaste);
     inputRight.addEventListener('paste', handlePaste);
+
+    // Copy logic - convert Markdown to rich text on Ctrl+C
+    function handleCopy(e) {
+        if (!copyAsRichText) return;
+
+        const selectedText = window.getSelection().toString();
+        if (selectedText) {
+            e.preventDefault();
+            const html = marked.parse(selectedText);
+            e.clipboardData.setData('text/plain', selectedText);
+            e.clipboardData.setData('text/html', html);
+        }
+    }
+    inputLeft.addEventListener('copy', handleCopy);
+    inputRight.addEventListener('copy', handleCopy);
 
     syncScrollBtn.addEventListener('change', () => {
         isSyncScrolling = syncScrollBtn.checked;
@@ -586,7 +613,17 @@ document.addEventListener('DOMContentLoaded', () => {
         button.disabled = true;
 
         try {
-            await navigator.clipboard.writeText(text);
+            if (copyAsRichText) {
+                // Convert Markdown to HTML and copy both formats
+                const html = marked.parse(text);
+                const clipboardItem = new ClipboardItem({
+                    'text/plain': new Blob([text], { type: 'text/plain' }),
+                    'text/html': new Blob([html], { type: 'text/html' })
+                });
+                await navigator.clipboard.write([clipboardItem]);
+            } else {
+                await navigator.clipboard.writeText(text);
+            }
             button.textContent = 'Copied!';
         } catch (err) {
             console.error('Failed to copy: ', err);
