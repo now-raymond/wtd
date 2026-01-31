@@ -303,6 +303,10 @@ document.addEventListener('DOMContentLoaded', () => {
             rowRight.appendChild(span);
         }
 
+        // Add class for row highlighting
+        rowLeft.classList.add(`diff-row-removed`);
+        rowRight.classList.add(`diff-row-added`);
+
         diffLeft.appendChild(rowLeft);
         diffRight.appendChild(rowRight);
 

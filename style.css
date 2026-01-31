@@ -321,6 +321,25 @@ textarea {
     min-height: 1.5em;
 }
 
+/* Row-level highlighting for diff types */
+.diff-row-added {
+    background-color: var(--diff-add-bg);
+    /* border-left: 3px solid #3fb950;
+    padding-left: 5px; */
+}
+
+.diff-row-removed {
+    background-color: var(--diff-del-bg);
+    /* border-left: 3px solid #f85149;
+    padding-left: 5px; */
+}
+
+.diff-row-modified {
+    background-color: rgba(187, 128, 9, 0.1);
+    /* border-left: 3px solid #d29922;
+    padding-left: 5px; */
+}
+
 /* Drag Overlay Styling (Applied via JS) */
 .drag-over {
     border: 2px dashed var(--accent-color);
