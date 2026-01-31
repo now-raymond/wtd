@@ -370,56 +370,87 @@ document.addEventListener('DOMContentLoaded', () => {
         minimapViewport.style.height = `${heightPercent}%`;
     }
 
-    // Handle Minimap Clicks
-    minimap.addEventListener('click', (e) => {
-        // Ignore if we were dragging
-        if (e.target === minimapViewport) return;
-
-        const rect = minimap.getBoundingClientRect();
-        const clickY = e.clientY - rect.top;
-        const percentage = clickY / rect.height;
-
-        const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
-        const targetScroll = percentage * scrollHeight;
-
-        // Center the view on the click
-        const viewHeight = diffLeft.clientHeight;
-
-        diffLeft.scrollTop = targetScroll - (viewHeight / 2);
-        diffRight.scrollTop = targetScroll - (viewHeight / 2);
-    });
-
-    // Drag-to-scroll on minimap viewport
+    // Drag-to-scroll on minimap (only when starting on viewport)
     let isDragging = false;
     let dragStartY = 0;
     let dragStartScrollTop = 0;
+    let hasDragged = false;
 
-    minimapViewport.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        dragStartY = e.clientY;
-        dragStartScrollTop = diffLeft.scrollTop;
-        minimapViewport.style.cursor = 'grabbing';
+    minimap.addEventListener('mousedown', (e) => {
+        const viewportRect = minimapViewport.getBoundingClientRect();
+        const clickY = e.clientY;
+
+        // Only allow dragging if click is within viewport bounds
+        const isInViewport = clickY >= viewportRect.top && clickY <= viewportRect.bottom;
+
+        if (isInViewport) {
+            isDragging = true;
+            hasDragged = false;
+            dragStartY = e.clientY;
+            dragStartScrollTop = diffLeft.scrollTop;
+        }
         e.preventDefault();
     });
 
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
 
-        const rect = minimap.getBoundingClientRect();
-        const deltaY = e.clientY - dragStartY;
-        const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
+        const deltaY = Math.abs(e.clientY - dragStartY);
+        // Consider it a drag if moved more than 3 pixels
+        if (deltaY > 3) {
+            hasDragged = true;
+        }
 
-        // Convert pixel movement on minimap to scroll movement
-        const scrollDelta = (deltaY / rect.height) * scrollHeight;
+        if (hasDragged) {
+            const rect = minimap.getBoundingClientRect();
+            const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
 
-        diffLeft.scrollTop = dragStartScrollTop + scrollDelta;
-        diffRight.scrollTop = dragStartScrollTop + scrollDelta;
+            // Convert pixel movement on minimap to scroll movement
+            const scrollDelta = ((e.clientY - dragStartY) / rect.height) * scrollHeight;
+
+            diffLeft.scrollTop = dragStartScrollTop + scrollDelta;
+            diffRight.scrollTop = dragStartScrollTop + scrollDelta;
+        }
     });
 
-    document.addEventListener('mouseup', () => {
-        if (isDragging) {
+    document.addEventListener('mouseup', (e) => {
+        const wasDragging = isDragging;
+        const wasClick = isDragging && !hasDragged;
+
+        if (wasDragging) {
             isDragging = false;
-            minimapViewport.style.cursor = 'grab';
+            hasDragged = false;
+        }
+
+        // If it was a click on minimap (not a drag), navigate to nearest diff
+        // Check if mouseup is within minimap bounds
+        const minimapRect = minimap.getBoundingClientRect();
+        const isInMinimap = e.clientX >= minimapRect.left && e.clientX <= minimapRect.right &&
+            e.clientY >= minimapRect.top && e.clientY <= minimapRect.bottom;
+
+        if (isInMinimap && (!wasDragging || wasClick)) {
+            const clickY = e.clientY - minimapRect.top;
+            const percentage = clickY / minimapRect.height;
+
+            const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
+            const targetScrollPos = percentage * scrollHeight;
+
+            // Find the nearest diff element to the click position
+            let nearestIndex = -1;
+            let nearestDistance = Infinity;
+
+            diffElements.forEach((item, index) => {
+                const rowCenter = item.leftRow.offsetTop + (item.leftRow.offsetHeight / 2);
+                const distance = Math.abs(rowCenter - targetScrollPos);
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestIndex = index;
+                }
+            });
+
+            if (nearestIndex >= 0) {
+                scrollToDiff(nearestIndex);
+            }
         }
     });
 
