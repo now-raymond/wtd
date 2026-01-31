@@ -134,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateNavState();
         } else {
             // Switch to Edit View
+            clearActiveHighlight();
             inputLeft.parentElement.classList.remove('hidden');
             inputRight.parentElement.classList.remove('hidden');
             diffLeft.classList.add('hidden');
@@ -451,12 +452,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function scrollToDiff(index) {
-        const target = diffElements[index].leftRow;
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Clear previous highlight
+        clearActiveHighlight();
 
-        // Highlight logic? maybe later.
+        const { leftRow, rightRow } = diffElements[index];
+        leftRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Apply active highlight to both rows
+        leftRow.classList.add('diff-row-active');
+        rightRow.classList.add('diff-row-active');
+
         currentDiffIndex = index;
         updateNavState();
+    }
+
+    function clearActiveHighlight() {
+        document.querySelectorAll('.diff-row-active').forEach(el => {
+            el.classList.remove('diff-row-active');
+        });
     }
 
     function clearAll() {
