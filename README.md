@@ -33,4 +33,4 @@ A client-side text comparison tool for quickly spotting differences between two 
 - `app.js` - diff logic and interactions
 - `style.css` - main UI styles
 - `minimap.css` - minimap styles
-- `sample_A.txt`, `sample_B.txt` - sample inputs
+- `samples/sample_A.txt`, `samples/sample_B.txt` - sample inputs

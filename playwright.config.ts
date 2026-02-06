@@ -5,7 +5,7 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4173'
   },
   webServer: {
-    command: 'pnpm exec http-server . -a 127.0.0.1 -p 4173 -c-1 --silent',
+    command: 'pnpm exec http-server src -a 127.0.0.1 -p 4173 -c-1 --silent',
     url: 'http://127.0.0.1:4173'
   }
 });
