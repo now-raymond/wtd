@@ -43,3 +43,28 @@ test('converts rich pasted HTML to Markdown with vendored Turndown', async ({ pa
   expect(value).toContain('## Heading');
   expect(value).toContain('Hello **mobile**.');
 });
+
+test('converts copied Markdown to rich HTML with vendored Marked', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('wtd_copy_richtext', 'true'));
+  await page.reload();
+
+  const input = page.locator('#input-left');
+  await input.fill('# Heading\n\n**Bold** text');
+  await input.selectText();
+  const copied = await input.evaluate(element => {
+    const clipboard = new DataTransfer();
+    element.dispatchEvent(new ClipboardEvent('copy', {
+      bubbles: true,
+      cancelable: true,
+      clipboardData: clipboard
+    }));
+    return {
+      plain: clipboard.getData('text/plain'),
+      html: clipboard.getData('text/html')
+    };
+  });
+
+  expect(copied.plain).toBe('# Heading\n\n**Bold** text');
+  expect(copied.html).toContain('<h1>Heading</h1>');
+  expect(copied.html).toContain('<strong>Bold</strong>');
+});

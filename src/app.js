@@ -628,7 +628,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleCopy(e) {
         if (!copyAsRichText) return;
 
-        const selectedText = window.getSelection().toString();
+        const selectedText = e.target instanceof HTMLTextAreaElement
+            ? e.target.value.slice(e.target.selectionStart, e.target.selectionEnd)
+            : window.getSelection().toString();
         if (selectedText) {
             e.preventDefault();
             const html = marked.parse(selectedText);
