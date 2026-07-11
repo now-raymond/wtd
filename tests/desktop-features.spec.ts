@@ -56,6 +56,7 @@ test.describe('core desktop workflows', () => {
 
     await expect(page.locator('#diff-left')).toBeVisible();
     await expect(page.locator('#diff-right')).toBeVisible();
+    await expect(page.locator('#diff-unified .unified-row')).toHaveCount(0);
     await expect(page.locator('#nav-controls')).toBeVisible();
     await expect(page.locator('#minimap')).toBeVisible();
     await expect(page.locator('#diff-left .diff-removed').filter({ hasText: 'brown' })).toBeVisible();
@@ -89,6 +90,33 @@ test.describe('core desktop workflows', () => {
       element.dispatchEvent(new Event('scroll'));
     });
     await expect.poll(() => page.locator('#diff-right').evaluate(element => element.scrollTop)).toBe(rightBefore);
+  });
+
+  test('classifies added, removed, and modified lines in the minimap', async ({ page }) => {
+    const original = [
+      'shared start',
+      'removed line',
+      'shared before replacement',
+      'old replacement',
+      'shared before addition',
+      'shared end'
+    ].join('\n');
+    const modified = [
+      'shared start',
+      'shared before replacement',
+      'new replacement',
+      'shared before addition',
+      'added line',
+      'shared end'
+    ].join('\n');
+
+    await page.locator('#input-left').fill(original);
+    await page.locator('#input-right').fill(modified);
+    await page.locator('[data-mode="diff"]').click();
+
+    await expect(page.locator('.minimap-marker.modified')).toHaveCount(1);
+    await expect(page.locator('.minimap-marker.added')).toHaveCount(1);
+    await expect(page.locator('.minimap-marker.removed')).toHaveCount(1);
   });
 
   test('loads dropped text files into both panes and persists them', async ({ page }) => {

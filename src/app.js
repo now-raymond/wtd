@@ -1,90 +1,116 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const appContainer = document.querySelector('.app-container');
+    const splitView = document.querySelector('.split-view');
     const inputLeft = document.getElementById('input-left');
     const inputRight = document.getElementById('input-right');
     const diffLeft = document.getElementById('diff-left');
     const diffRight = document.getElementById('diff-right');
-    const modeToggle = document.getElementById('mode-toggle');
-    const clearBtn = document.getElementById('clear-btn');
+    const diffUnified = document.getElementById('diff-unified');
     const paneLeft = document.getElementById('pane-left');
     const paneRight = document.getElementById('pane-right');
+    const modeToggle = document.getElementById('mode-toggle');
+    const modeOptions = [...modeToggle.querySelectorAll('[data-mode]')];
+    const mobilePaneSwitch = document.getElementById('mobile-pane-switch');
+    const mobilePaneOptions = [...mobilePaneSwitch.querySelectorAll('[data-pane]')];
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
 
-    let isDiffMode = false;
-
-    const syncScrollBtn = document.getElementById('sync-scroll');
+    const clearBtn = document.getElementById('clear-btn');
     const swapBtn = document.getElementById('swap-btn');
+    const syncScrollBtn = document.getElementById('sync-scroll');
     const prevDiffBtn = document.getElementById('prev-diff');
     const nextDiffBtn = document.getElementById('next-diff');
     const diffCounter = document.getElementById('diff-counter');
     const navControls = document.getElementById('nav-controls');
+    const copyLeftBtn = document.getElementById('copy-left');
+    const copyRightBtn = document.getElementById('copy-right');
 
-    let currentDiffIndex = -1;
-    let totalDiffs = 0;
-    let diffElements = [];
-    let isSyncScrolling = true;
-    let isSyncingLeft = false;
-    let isSyncingRight = false;
-
-    // Settings
     const settingsBtn = document.getElementById('settings-btn');
     const settingsModal = document.getElementById('settings-modal');
     const settingsClose = document.getElementById('settings-close');
     const pasteMarkdownCheckbox = document.getElementById('setting-paste-markdown');
     const copyRichtextCheckbox = document.getElementById('setting-copy-richtext');
+
+    const mobileMoreBtn = document.getElementById('mobile-more-btn');
+    const moreSheet = document.getElementById('more-sheet');
+    const moreSheetClose = document.getElementById('more-sheet-close');
+    const mobileSwapBtn = document.getElementById('mobile-swap-btn');
+    const mobileClearBtn = document.getElementById('mobile-clear-btn');
+    const mobileSettingsBtn = document.getElementById('mobile-settings-btn');
+
+    let isDiffMode = false;
+    let activeMobilePane = 'left';
+    let currentDiffIndex = -1;
+    let totalDiffs = 0;
+    let currentDiffModel = [];
+    let diffElements = [];
+    let isSyncScrolling = true;
+    let isSyncingLeft = false;
+    let isSyncingRight = false;
     let pasteAsMarkdown = false;
     let copyAsRichText = false;
+    let settingsReturnFocus = null;
+    let moreReturnFocus = null;
 
-    // Initialize Turndown service
-    const turndownService = new TurndownService({
-        headingStyle: 'atx',
-        codeBlockStyle: 'fenced'
-    });
+    const turndownService = typeof TurndownService === 'function'
+        ? new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' })
+        : null;
 
-    // --- Core Logic ---
+    function getFocusable(container) {
+        return [...container.querySelectorAll('button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+            .filter(element => element.offsetParent !== null && !element.closest('.hidden'));
+    }
 
-    // Paste handler for HTML to Markdown conversion
-    function handlePaste(e) {
-        // Skip if setting is disabled
-        if (!pasteAsMarkdown) return;
-
-        const clipboardData = e.clipboardData || window.clipboardData;
-        if (!clipboardData) return;
-
-        // Check if there is HTML content
-        const html = clipboardData.getData('text/html');
-        if (html) {
-            e.preventDefault();
-            // Convert HTML to Markdown
-            const markdown = turndownService.turndown(html);
-
-            // Use execCommand to preserve undo stack (Ctrl+Z support)
-            document.execCommand('insertText', false, markdown);
-
-            // Previous implementation (breaks undo):
-            // const textarea = e.target;
-            // const start = textarea.selectionStart;
-            // const end = textarea.selectionEnd;
-            // const text = textarea.value;
-
-            // textarea.value = text.substring(0, start) + markdown + text.substring(end);
-
-            // // Move cursor
-            // textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
-
-            // // Trigger input for saving/UI
-            // textarea.dispatchEvent(new Event('input'));
-
-            saveToStorage();
+    function trapFocus(event, overlay) {
+        if (event.key !== 'Tab') return;
+        const focusable = getFocusable(overlay);
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
         }
     }
 
-    // --- Settings Modal ---
+    function openMoreSheet() {
+        moreReturnFocus = document.activeElement;
+        moreSheet.classList.remove('hidden');
+        mobileMoreBtn.setAttribute('aria-expanded', 'true');
+        moreSheetClose.focus();
+    }
 
-    function openSettings() {
+    function closeMoreSheet(restoreFocus = true) {
+        if (moreSheet.classList.contains('hidden')) return;
+        moreSheet.classList.add('hidden');
+        mobileMoreBtn.setAttribute('aria-expanded', 'false');
+        if (restoreFocus && moreReturnFocus) moreReturnFocus.focus();
+    }
+
+    function openSettings(trigger = document.activeElement) {
+        settingsReturnFocus = trigger;
+        closeMoreSheet(false);
         settingsModal.classList.remove('hidden');
+        settingsClose.focus();
     }
 
     function closeSettings() {
+        if (settingsModal.classList.contains('hidden')) return;
         settingsModal.classList.add('hidden');
+        if (settingsReturnFocus) settingsReturnFocus.focus();
+    }
+
+    function handlePaste(event) {
+        if (!pasteAsMarkdown || !turndownService) return;
+        const clipboardData = event.clipboardData || window.clipboardData;
+        if (!clipboardData) return;
+        const html = clipboardData.getData('text/html');
+        if (!html) return;
+        event.preventDefault();
+        document.execCommand('insertText', false, turndownService.turndown(html));
+        saveToStorage();
     }
 
     function saveSettings() {
@@ -94,423 +120,367 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadSettings() {
         const storedPaste = localStorage.getItem('wtd_paste_markdown');
-        if (storedPaste !== null) {
-            pasteAsMarkdown = storedPaste === 'true';
-            pasteMarkdownCheckbox.checked = pasteAsMarkdown;
-        }
         const storedCopy = localStorage.getItem('wtd_copy_richtext');
-        if (storedCopy !== null) {
-            copyAsRichText = storedCopy === 'true';
-            copyRichtextCheckbox.checked = copyAsRichText;
-        }
+        if (storedPaste !== null) pasteAsMarkdown = storedPaste === 'true';
+        if (storedCopy !== null) copyAsRichText = storedCopy === 'true';
+        pasteMarkdownCheckbox.checked = pasteAsMarkdown;
+        copyRichtextCheckbox.checked = copyAsRichText;
     }
 
-    function toggleMode() {
-        const splitView = document.querySelector('.split-view');
-        const editOption = modeToggle.querySelector('[data-mode="edit"]');
-        const diffOption = modeToggle.querySelector('[data-mode="diff"]');
+    function setActiveMobilePane(side) {
+        activeMobilePane = side;
+        paneLeft.classList.toggle('mobile-active', side === 'left');
+        paneRight.classList.toggle('mobile-active', side === 'right');
+        mobilePaneOptions.forEach(option => {
+            const active = option.dataset.pane === side;
+            option.classList.toggle('active', active);
+            option.setAttribute('aria-pressed', String(active));
+        });
+    }
 
-        if (!isDiffMode) {
-            // Switch to Diff View
-            const leftText = inputLeft.value;
-            const rightText = inputRight.value;
-            renderDiff(leftText, rightText);
+    function setMode(mode) {
+        const wantsDiff = mode === 'diff';
+        if (wantsDiff === isDiffMode) return;
 
+        isDiffMode = wantsDiff;
+        appContainer.classList.toggle('diff-mode-active', wantsDiff);
+        splitView.classList.toggle('diff-active', wantsDiff);
+        modeToggle.classList.toggle('diff-active', wantsDiff);
+        modeOptions.forEach(option => {
+            const active = option.dataset.mode === mode;
+            option.classList.toggle('active', active);
+            option.setAttribute('aria-pressed', String(active));
+        });
+
+        if (wantsDiff) {
+            renderDiff(inputLeft.value, inputRight.value);
             inputLeft.parentElement.classList.add('hidden');
             inputRight.parentElement.classList.add('hidden');
             diffLeft.classList.remove('hidden');
             diffRight.classList.remove('hidden');
+            diffUnified.classList.remove('hidden');
             navControls.classList.remove('hidden');
-
-            // Show minimap
-            splitView.classList.add('diff-active');
-
-            // Update switch state
-            modeToggle.classList.add('diff-active');
-            editOption.classList.remove('active');
-            diffOption.classList.add('active');
-
-            // Initial nav update
-            updateNavState();
         } else {
-            // Switch to Edit View
             clearActiveHighlight();
             inputLeft.parentElement.classList.remove('hidden');
             inputRight.parentElement.classList.remove('hidden');
             diffLeft.classList.add('hidden');
             diffRight.classList.add('hidden');
+            diffUnified.classList.add('hidden');
             navControls.classList.add('hidden');
-
-            // Hide minimap
-            splitView.classList.remove('diff-active');
-
-            // Update switch state
-            modeToggle.classList.remove('diff-active');
-            editOption.classList.add('active');
-            diffOption.classList.remove('active');
         }
-        isDiffMode = !isDiffMode;
     }
 
-    function renderDiff(text1, text2) {
-        // Clear previous
-        diffLeft.innerHTML = '';
-        diffRight.innerHTML = '';
-        diffElements = [];
-        currentDiffIndex = -1;
-
-        if (!text1 && !text2) {
-            updateNavState();
-            return;
-        }
-
-        // Use line-based diff for structure
+    function buildDiffModel(text1, text2) {
+        if (!text1 && !text2) return [];
         const lineDiff = Diff.diffLines(text1, text2);
+        const model = [];
+        let index = 0;
 
-        // Group adjacent removed/added chunks for pairing
-        let i = 0;
-        while (i < lineDiff.length) {
-            const chunk = lineDiff[i];
-
+        while (index < lineDiff.length) {
+            const chunk = lineDiff[index];
             if (!chunk.added && !chunk.removed) {
-                // Unchanged lines - render in both panes
-                renderUnchangedRow(chunk.value);
-                i++;
-            } else {
-                // Collect consecutive removed and added chunks
-                let removedText = '';
-                let addedText = '';
-
-                while (i < lineDiff.length && lineDiff[i].removed) {
-                    removedText += lineDiff[i].value;
-                    i++;
-                }
-                while (i < lineDiff.length && lineDiff[i].added) {
-                    addedText += lineDiff[i].value;
-                    i++;
-                }
-
-                // Render the paired change with word-level highlighting
-                renderChangedRow(removedText, addedText);
+                model.push({ kind: 'unchanged', text: chunk.value });
+                index++;
+                continue;
             }
-        }
 
-        totalDiffs = diffElements.length;
-        updateNavState();
+            let removedText = '';
+            let addedText = '';
+            while (index < lineDiff.length && lineDiff[index].removed) {
+                removedText += lineDiff[index].value;
+                index++;
+            }
+            while (index < lineDiff.length && lineDiff[index].added) {
+                addedText += lineDiff[index].value;
+                index++;
+            }
 
-        // Sync row heights and update minimap after layout
-        requestAnimationFrame(() => {
-            syncRowHeights();
-            updateMinimap();
-        });
-    }
-
-    function syncRowHeights() {
-        const leftRows = diffLeft.querySelectorAll('.diff-row');
-        const rightRows = diffRight.querySelectorAll('.diff-row');
-
-        const count = Math.min(leftRows.length, rightRows.length);
-        for (let i = 0; i < count; i++) {
-            // Reset heights first
-            leftRows[i].style.minHeight = '';
-            rightRows[i].style.minHeight = '';
-
-            // Get natural heights
-            const leftHeight = leftRows[i].offsetHeight;
-            const rightHeight = rightRows[i].offsetHeight;
-
-            // Set both to the max
-            const maxHeight = Math.max(leftHeight, rightHeight);
-            leftRows[i].style.minHeight = `${maxHeight}px`;
-            rightRows[i].style.minHeight = `${maxHeight}px`;
-        }
-    }
-
-    function renderUnchangedRow(text) {
-        const rowLeft = document.createElement('div');
-        rowLeft.className = 'diff-row';
-        rowLeft.textContent = text;
-        diffLeft.appendChild(rowLeft);
-
-        const rowRight = document.createElement('div');
-        rowRight.className = 'diff-row';
-        rowRight.textContent = text;
-        diffRight.appendChild(rowRight);
-    }
-
-    function renderChangedRow(removedText, addedText) {
-        const rowLeft = document.createElement('div');
-        rowLeft.className = 'diff-row diff-row-changed';
-
-        const rowRight = document.createElement('div');
-        rowRight.className = 'diff-row diff-row-changed';
-
-        // Determine the type for navigation/minimap
-        let rowType = 'modified';
-        if (removedText && !addedText) rowType = 'removed';
-        else if (!removedText && addedText) rowType = 'added';
-
-        if (removedText && addedText) {
-            // diffLines() includes trailing newlines in each line's value.
-            // Strip them before word-level diffing to keep all content on one visual row.
             const cleanRemoved = removedText.replace(/\n+$/, '');
             const cleanAdded = addedText.replace(/\n+$/, '');
-            const wordDiff = Diff.diffWords(cleanRemoved, cleanAdded);
+            const wordDiff = removedText && addedText ? Diff.diffWords(cleanRemoved, cleanAdded) : [];
+            let type = 'modified';
+            if (removedText && !addedText) type = 'removed';
+            if (!removedText && addedText) type = 'added';
+            model.push({ kind: 'changed', removedText, addedText, wordDiff, type });
+        }
 
-            // Determine fine-grained rowType based on word diff results
-            const hasRemovedWords = wordDiff.some(part => part.removed);
-            const hasAddedWords = wordDiff.some(part => part.added);
-            if (hasRemovedWords && hasAddedWords) {
-                rowType = 'modified';
-            } else if (hasRemovedWords) {
-                rowType = 'removed';
-            } else if (hasAddedWords) {
-                rowType = 'added';
-            }
+        return model;
+    }
 
-            wordDiff.forEach(part => {
+    function appendPairedChange(entry, leftRow, rightRow) {
+        if (entry.removedText && entry.addedText) {
+            entry.wordDiff.forEach(part => {
                 if (part.removed) {
                     const span = document.createElement('span');
                     span.className = 'diff-removed';
                     span.textContent = part.value;
-                    rowLeft.appendChild(span);
+                    leftRow.appendChild(span);
                 } else if (part.added) {
                     const span = document.createElement('span');
                     span.className = 'diff-added';
                     span.textContent = part.value;
-                    rowRight.appendChild(span);
+                    rightRow.appendChild(span);
                 } else {
-                    // Unchanged words - show in both
                     const spanLeft = document.createElement('span');
-                    spanLeft.textContent = part.value;
-                    rowLeft.appendChild(spanLeft);
-
                     const spanRight = document.createElement('span');
+                    spanLeft.textContent = part.value;
                     spanRight.textContent = part.value;
-                    rowRight.appendChild(spanRight);
+                    leftRow.appendChild(spanLeft);
+                    rightRow.appendChild(spanRight);
                 }
             });
-        } else if (removedText) {
-            // Only removed (deletion)
+        } else if (entry.removedText) {
             const span = document.createElement('span');
             span.className = 'diff-removed';
-            span.textContent = removedText;
-            rowLeft.appendChild(span);
-        } else if (addedText) {
-            // Only added (insertion)
+            span.textContent = entry.removedText;
+            leftRow.appendChild(span);
+        } else if (entry.addedText) {
             const span = document.createElement('span');
             span.className = 'diff-added';
-            span.textContent = addedText;
-            rowRight.appendChild(span);
+            span.textContent = entry.addedText;
+            rightRow.appendChild(span);
         }
+    }
 
-        // Add class for row highlighting
-        rowLeft.classList.add(`diff-row-removed`);
-        rowRight.classList.add(`diff-row-added`);
+    function renderDesktopDiff(model) {
+        let changeIndex = 0;
+        model.forEach(entry => {
+            const leftRow = document.createElement('div');
+            const rightRow = document.createElement('div');
+            leftRow.className = 'diff-row';
+            rightRow.className = 'diff-row';
 
-        diffLeft.appendChild(rowLeft);
-        diffRight.appendChild(rowRight);
+            if (entry.kind === 'unchanged') {
+                leftRow.textContent = entry.text;
+                rightRow.textContent = entry.text;
+            } else {
+                leftRow.classList.add('diff-row-changed', 'diff-row-removed');
+                rightRow.classList.add('diff-row-changed', 'diff-row-added');
+                appendPairedChange(entry, leftRow, rightRow);
+                diffElements[changeIndex].leftRow = leftRow;
+                diffElements[changeIndex].rightRow = rightRow;
+                changeIndex++;
+            }
 
-        // Track at row level for navigation and minimap
-        diffElements.push({
-            leftRow: rowLeft,
-            rightRow: rowRight,
-            type: rowType
+            diffLeft.appendChild(leftRow);
+            diffRight.appendChild(rightRow);
         });
     }
 
+    function createUnifiedRow(kind, text, wordDiff, partKind) {
+        const row = document.createElement('div');
+        row.className = `unified-row unified-${kind}`;
+        row.setAttribute('aria-label', kind === 'removed' ? 'Removed text' : kind === 'added' ? 'Added text' : 'Unchanged text');
+
+        const gutter = document.createElement('span');
+        gutter.className = 'unified-gutter';
+        gutter.setAttribute('aria-hidden', 'true');
+        gutter.textContent = kind === 'removed' ? '−' : kind === 'added' ? '+' : ' ';
+        row.appendChild(gutter);
+
+        const content = document.createElement('span');
+        content.className = 'unified-content';
+        if (wordDiff?.length) {
+            wordDiff.forEach(part => {
+                if ((partKind === 'removed' && part.added) || (partKind === 'added' && part.removed)) return;
+                const span = document.createElement('span');
+                if (part.removed) span.className = 'diff-removed';
+                if (part.added) span.className = 'diff-added';
+                span.textContent = part.value;
+                content.appendChild(span);
+            });
+        } else {
+            content.textContent = text;
+        }
+        row.appendChild(content);
+        return row;
+    }
+
+    function renderUnifiedDiff(model) {
+        let changeIndex = 0;
+        model.forEach(entry => {
+            if (entry.kind === 'unchanged') {
+                diffUnified.appendChild(createUnifiedRow('unchanged', entry.text));
+                return;
+            }
+
+            const group = document.createElement('div');
+            group.className = `unified-change unified-change-${entry.type}`;
+            group.dataset.changeIndex = String(changeIndex);
+            if (entry.removedText) {
+                group.appendChild(createUnifiedRow('removed', entry.removedText, entry.wordDiff, 'removed'));
+            }
+            if (entry.addedText) {
+                group.appendChild(createUnifiedRow('added', entry.addedText, entry.wordDiff, 'added'));
+            }
+            diffUnified.appendChild(group);
+            diffElements[changeIndex].unifiedTarget = group;
+            changeIndex++;
+        });
+    }
+
+    function renderActiveDiffView() {
+        diffLeft.replaceChildren();
+        diffRight.replaceChildren();
+        diffUnified.replaceChildren();
+        minimapMarkers.replaceChildren();
+        clearActiveHighlight();
+
+        diffElements = currentDiffModel
+            .filter(entry => entry.kind === 'changed')
+            .map(entry => ({ type: entry.type, leftRow: null, rightRow: null, unifiedTarget: null }));
+        totalDiffs = diffElements.length;
+
+        if (mobileQuery.matches) {
+            renderUnifiedDiff(currentDiffModel);
+        } else {
+            renderDesktopDiff(currentDiffModel);
+        }
+        updateNavState();
+
+        requestAnimationFrame(() => {
+            if (!mobileQuery.matches) {
+                syncRowHeights();
+                updateMinimap();
+            }
+        });
+    }
+
+    function renderDiff(text1, text2) {
+        currentDiffModel = buildDiffModel(text1, text2);
+        currentDiffIndex = -1;
+        renderActiveDiffView();
+    }
+
+    function resetRowHeights() {
+        diffLeft.querySelectorAll('.diff-row').forEach(row => { row.style.minHeight = ''; });
+        diffRight.querySelectorAll('.diff-row').forEach(row => { row.style.minHeight = ''; });
+    }
+
+    function syncRowHeights() {
+        resetRowHeights();
+        const leftRows = diffLeft.querySelectorAll('.diff-row');
+        const rightRows = diffRight.querySelectorAll('.diff-row');
+        const count = Math.min(leftRows.length, rightRows.length);
+        for (let index = 0; index < count; index++) {
+            const maxHeight = Math.max(leftRows[index].offsetHeight, rightRows[index].offsetHeight);
+            leftRows[index].style.minHeight = `${maxHeight}px`;
+            rightRows[index].style.minHeight = `${maxHeight}px`;
+        }
+    }
+
     const minimap = document.getElementById('minimap');
-
-    // Create persistent minimap structure
     const minimapMarkers = document.createElement('div');
-    minimapMarkers.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;';
+    minimapMarkers.className = 'minimap-markers';
     minimap.appendChild(minimapMarkers);
-
     const minimapViewport = document.createElement('div');
     minimapViewport.className = 'minimap-viewport';
     minimap.appendChild(minimapViewport);
 
     function updateMinimap() {
-        minimapMarkers.innerHTML = '';
-        if (!diffElements.length) return;
-
-        // Calculate max scroll height to normalize positions
+        minimapMarkers.replaceChildren();
+        if (mobileQuery.matches || !diffElements.length) return;
         const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
-
         diffElements.forEach(item => {
-            const { leftRow, type } = item;
-
-            const top = (leftRow.offsetTop / scrollHeight) * 100;
-            const height = Math.max((leftRow.offsetHeight / scrollHeight) * 100, 0.5);
-
             const marker = document.createElement('div');
-            marker.className = `minimap-marker ${type}`;
-            marker.style.top = `${top}%`;
-            marker.style.height = `${height}%`;
+            marker.className = `minimap-marker ${item.type}`;
+            marker.style.top = `${(item.leftRow.offsetTop / scrollHeight) * 100}%`;
+            marker.style.height = `${Math.max((item.leftRow.offsetHeight / scrollHeight) * 100, 0.5)}%`;
             minimapMarkers.appendChild(marker);
         });
-
         updateMinimapViewport();
     }
 
     function updateMinimapViewport() {
-        if (!minimapViewport || !isDiffMode) return;
-
+        if (mobileQuery.matches || !isDiffMode) return;
         const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
-        const clientHeight = diffLeft.clientHeight;
-        const scrollTop = diffLeft.scrollTop;
-
-        // Avoid division by zero
-        if (scrollHeight === 0) return;
-
-        const topPercent = (scrollTop / scrollHeight) * 100;
-        const heightPercent = (clientHeight / scrollHeight) * 100;
-
-        minimapViewport.style.top = `${topPercent}%`;
-        minimapViewport.style.height = `${heightPercent}%`;
+        if (!scrollHeight) return;
+        minimapViewport.style.top = `${(diffLeft.scrollTop / scrollHeight) * 100}%`;
+        minimapViewport.style.height = `${(diffLeft.clientHeight / scrollHeight) * 100}%`;
     }
 
-    // Drag-to-scroll on minimap (only when starting on viewport)
     let isDragging = false;
     let dragStartY = 0;
     let dragStartScrollTop = 0;
     let hasDragged = false;
 
-    minimap.addEventListener('mousedown', (e) => {
+    minimap.addEventListener('mousedown', event => {
+        if (mobileQuery.matches) return;
         const viewportRect = minimapViewport.getBoundingClientRect();
-        const clickY = e.clientY;
-
-        // Only allow dragging if click is within viewport bounds
-        const isInViewport = clickY >= viewportRect.top && clickY <= viewportRect.bottom;
-
-        if (isInViewport) {
+        if (event.clientY >= viewportRect.top && event.clientY <= viewportRect.bottom) {
             isDragging = true;
             hasDragged = false;
-            dragStartY = e.clientY;
+            dragStartY = event.clientY;
             dragStartScrollTop = diffLeft.scrollTop;
         }
-        e.preventDefault();
+        event.preventDefault();
     });
 
-    document.addEventListener('mousemove', (e) => {
+    document.addEventListener('mousemove', event => {
         if (!isDragging) return;
-
-        const deltaY = Math.abs(e.clientY - dragStartY);
-        // Consider it a drag if moved more than 3 pixels
-        if (deltaY > 3) {
-            hasDragged = true;
-        }
-
-        if (hasDragged) {
-            const rect = minimap.getBoundingClientRect();
-            const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
-
-            // Convert pixel movement on minimap to scroll movement
-            const scrollDelta = ((e.clientY - dragStartY) / rect.height) * scrollHeight;
-
-            diffLeft.scrollTop = dragStartScrollTop + scrollDelta;
-            diffRight.scrollTop = dragStartScrollTop + scrollDelta;
-        }
+        if (Math.abs(event.clientY - dragStartY) > 3) hasDragged = true;
+        if (!hasDragged) return;
+        const rect = minimap.getBoundingClientRect();
+        const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
+        const scrollDelta = ((event.clientY - dragStartY) / rect.height) * scrollHeight;
+        diffLeft.scrollTop = dragStartScrollTop + scrollDelta;
+        diffRight.scrollTop = dragStartScrollTop + scrollDelta;
     });
 
-    document.addEventListener('mouseup', (e) => {
+    document.addEventListener('mouseup', event => {
+        if (mobileQuery.matches) return;
         const wasDragging = isDragging;
         const wasClick = isDragging && !hasDragged;
+        isDragging = false;
+        hasDragged = false;
 
-        if (wasDragging) {
-            isDragging = false;
-            hasDragged = false;
-        }
+        const rect = minimap.getBoundingClientRect();
+        const isInside = event.clientX >= rect.left && event.clientX <= rect.right &&
+            event.clientY >= rect.top && event.clientY <= rect.bottom;
+        if (!isInside || (wasDragging && !wasClick)) return;
 
-        // If it was a click on minimap (not a drag), navigate to nearest diff
-        // Check if mouseup is within minimap bounds
-        const minimapRect = minimap.getBoundingClientRect();
-        const isInMinimap = e.clientX >= minimapRect.left && e.clientX <= minimapRect.right &&
-            e.clientY >= minimapRect.top && e.clientY <= minimapRect.bottom;
-
-        if (isInMinimap && (!wasDragging || wasClick)) {
-            const clickY = e.clientY - minimapRect.top;
-            const percentage = clickY / minimapRect.height;
-
-            const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
-            const targetScrollPos = percentage * scrollHeight;
-
-            // Find the nearest diff element to the click position
-            let nearestIndex = -1;
-            let nearestDistance = Infinity;
-
-            diffElements.forEach((item, index) => {
-                const rowCenter = item.leftRow.offsetTop + (item.leftRow.offsetHeight / 2);
-                const distance = Math.abs(rowCenter - targetScrollPos);
-                if (distance < nearestDistance) {
-                    nearestDistance = distance;
-                    nearestIndex = index;
-                }
-            });
-
-            if (nearestIndex >= 0) {
-                scrollToDiff(nearestIndex);
+        const scrollHeight = Math.max(diffLeft.scrollHeight, diffRight.scrollHeight, diffLeft.clientHeight);
+        const target = ((event.clientY - rect.top) / rect.height) * scrollHeight;
+        let nearestIndex = -1;
+        let nearestDistance = Infinity;
+        diffElements.forEach((item, index) => {
+            const distance = Math.abs(item.leftRow.offsetTop + (item.leftRow.offsetHeight / 2) - target);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestIndex = index;
             }
-        }
-    });
-
-    // Update viewport on scroll
-    diffLeft.addEventListener('scroll', () => {
-        if (isDiffMode) requestAnimationFrame(updateMinimapViewport);
-    });
-
-    // Update minimap on resize
-    window.addEventListener('resize', () => {
-        if (isDiffMode) {
-            // Debounce slightly proper
-            if (window.minimapTimeout) clearTimeout(window.minimapTimeout);
-            window.minimapTimeout = setTimeout(updateMinimap, 100);
-        }
+        });
+        if (nearestIndex >= 0) scrollToDiff(nearestIndex);
     });
 
     function updateNavState() {
-        if (totalDiffs === 0) {
-            diffCounter.textContent = '0/0';
-            prevDiffBtn.disabled = true;
-            nextDiffBtn.disabled = true;
-        } else {
-            const displayIndex = currentDiffIndex >= 0 ? currentDiffIndex + 1 : 0;
-            diffCounter.textContent = `${displayIndex}/${totalDiffs}`;
-            // Always enable if there are diffs, to allow wrapping
-            prevDiffBtn.disabled = false;
-            nextDiffBtn.disabled = false;
-        }
-    }
-
-    function scrollToDiff(index) {
-        // Clear previous highlight
-        clearActiveHighlight();
-
-        const { leftRow, rightRow } = diffElements[index];
-        leftRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        // Apply active highlight to both rows
-        leftRow.classList.add('diff-row-active');
-        rightRow.classList.add('diff-row-active');
-
-        currentDiffIndex = index;
-        updateNavState();
+        const hasDiffs = totalDiffs > 0;
+        diffCounter.textContent = hasDiffs ? `${currentDiffIndex >= 0 ? currentDiffIndex + 1 : 0}/${totalDiffs}` : '0/0';
+        prevDiffBtn.disabled = !hasDiffs;
+        nextDiffBtn.disabled = !hasDiffs;
     }
 
     function clearActiveHighlight() {
-        document.querySelectorAll('.diff-row-active').forEach(el => {
-            el.classList.remove('diff-row-active');
-        });
+        document.querySelectorAll('.diff-row-active').forEach(element => element.classList.remove('diff-row-active'));
     }
 
-    function clearAll() {
-        inputLeft.value = '';
-        inputRight.value = '';
-        if (isDiffMode) toggleMode();
+    function highlightDiff(index) {
+        const item = diffElements[index];
+        item.leftRow?.classList.add('diff-row-active');
+        item.rightRow?.classList.add('diff-row-active');
+        item.unifiedTarget?.classList.add('diff-row-active');
     }
 
-
-    // --- Persistence ---
+    function scrollToDiff(index, behavior = 'smooth') {
+        if (!diffElements[index]) return;
+        clearActiveHighlight();
+        highlightDiff(index);
+        const target = mobileQuery.matches ? diffElements[index].unifiedTarget : diffElements[index].leftRow;
+        target?.scrollIntoView({ behavior, block: 'center' });
+        currentDiffIndex = index;
+        updateNavState();
+    }
 
     function saveToStorage() {
         localStorage.setItem('wtd_input_left', inputLeft.value);
@@ -520,49 +490,57 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadFromStorage() {
         const storedLeft = localStorage.getItem('wtd_input_left');
         const storedRight = localStorage.getItem('wtd_input_right');
-
         if (storedLeft !== null) inputLeft.value = storedLeft;
         if (storedRight !== null) inputRight.value = storedRight;
     }
 
-    // --- Drag and Drop ---
+    function clearAll() {
+        inputLeft.value = '';
+        inputRight.value = '';
+        localStorage.removeItem('wtd_input_left');
+        localStorage.removeItem('wtd_input_right');
+        setMode('edit');
+    }
+
+    function swapTexts() {
+        const temporary = inputLeft.value;
+        inputLeft.value = inputRight.value;
+        inputRight.value = temporary;
+        saveToStorage();
+        if (isDiffMode) renderDiff(inputLeft.value, inputRight.value);
+    }
+
+    function setSyncScrolling(checked) {
+        isSyncScrolling = checked;
+        syncScrollBtn.checked = checked;
+    }
 
     function setupDragAndDrop(element, inputElement) {
-        element.addEventListener('dragover', (e) => {
-            e.preventDefault();
+        element.addEventListener('dragover', event => {
+            event.preventDefault();
             element.classList.add('drag-over');
         });
-
-        element.addEventListener('dragleave', (e) => {
-            e.preventDefault();
+        element.addEventListener('dragleave', event => {
+            event.preventDefault();
             element.classList.remove('drag-over');
         });
-
-        element.addEventListener('drop', (e) => {
-            e.preventDefault();
+        element.addEventListener('drop', event => {
+            event.preventDefault();
             element.classList.remove('drag-over');
-
-            const file = e.dataTransfer.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    inputElement.value = event.target.result;
-                    saveToStorage(); // Save after drop
-
-                    // Re-diff if in diff mode
-                    if (isDiffMode) {
-                        renderDiff(inputLeft.value, inputRight.value);
-                    }
-                };
-                reader.readAsText(file);
-            }
+            const file = event.dataTransfer.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = loadEvent => {
+                inputElement.value = loadEvent.target.result;
+                saveToStorage();
+                if (isDiffMode) renderDiff(inputLeft.value, inputRight.value);
+            };
+            reader.readAsText(file);
         });
     }
 
-    // --- Sync Scroll ---
-
     function handleScrollLeft() {
-        if (!isSyncScrolling) return;
+        if (!isSyncScrolling || mobileQuery.matches) return;
         if (isSyncingLeft) {
             isSyncingLeft = false;
             return;
@@ -573,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleScrollRight() {
-        if (!isSyncScrolling) return;
+        if (!isSyncScrolling || mobileQuery.matches) return;
         if (isSyncingRight) {
             isSyncingRight = false;
             return;
@@ -583,18 +561,61 @@ document.addEventListener('DOMContentLoaded', () => {
         diffLeft.scrollLeft = diffRight.scrollLeft;
     }
 
-    // --- Event Listeners ---
+    function handleCopy(event) {
+        if (!copyAsRichText) return;
+        const selectedText = event.target instanceof HTMLTextAreaElement
+            ? event.target.value.slice(event.target.selectionStart, event.target.selectionEnd)
+            : window.getSelection().toString();
+        if (!selectedText) return;
+        event.preventDefault();
+        event.clipboardData.setData('text/plain', selectedText);
+        event.clipboardData.setData('text/html', marked.parse(selectedText));
+    }
 
-    // Load saved data
+    async function copyToClipboard(text, button) {
+        button.disabled = true;
+        try {
+            if (copyAsRichText) {
+                const clipboardItem = new ClipboardItem({
+                    'text/plain': new Blob([text], { type: 'text/plain' }),
+                    'text/html': new Blob([marked.parse(text)], { type: 'text/html' })
+                });
+                await navigator.clipboard.write([clipboardItem]);
+            } else {
+                await navigator.clipboard.writeText(text);
+            }
+            button.textContent = 'Copied!';
+        } catch (error) {
+            console.error('Failed to copy: ', error);
+            button.textContent = 'Error';
+        }
+        setTimeout(() => {
+            button.textContent = 'Copy';
+            button.disabled = false;
+        }, 2000);
+    }
+
+    function handleBreakpointChange() {
+        closeMoreSheet(false);
+        if (!isDiffMode) return;
+        const selectedIndex = currentDiffIndex;
+        renderActiveDiffView();
+        requestAnimationFrame(() => {
+            if (selectedIndex >= 0 && selectedIndex < totalDiffs) scrollToDiff(selectedIndex, 'auto');
+        });
+    }
+
     loadFromStorage();
     loadSettings();
+    setActiveMobilePane('left');
+    mobileMoreBtn.setAttribute('aria-expanded', 'false');
 
-    // Settings modal handlers
-    settingsBtn.addEventListener('click', openSettings);
+    modeOptions.forEach(option => option.addEventListener('click', () => setMode(option.dataset.mode)));
+    mobilePaneOptions.forEach(option => option.addEventListener('click', () => setActiveMobilePane(option.dataset.pane)));
+
+    settingsBtn.addEventListener('click', () => openSettings(settingsBtn));
     settingsClose.addEventListener('click', closeSettings);
-    settingsModal.addEventListener('click', (e) => {
-        if (e.target === settingsModal) closeSettings();
-    });
+    settingsModal.addEventListener('click', event => { if (event.target === settingsModal) closeSettings(); });
     pasteMarkdownCheckbox.addEventListener('change', () => {
         pasteAsMarkdown = pasteMarkdownCheckbox.checked;
         saveSettings();
@@ -603,119 +624,65 @@ document.addEventListener('DOMContentLoaded', () => {
         copyAsRichText = copyRichtextCheckbox.checked;
         saveSettings();
     });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !settingsModal.classList.contains('hidden')) {
-            closeSettings();
+
+    mobileMoreBtn.addEventListener('click', openMoreSheet);
+    moreSheetClose.addEventListener('click', () => closeMoreSheet());
+    moreSheet.addEventListener('click', event => { if (event.target === moreSheet) closeMoreSheet(); });
+    mobileSettingsBtn.addEventListener('click', () => openSettings(mobileMoreBtn));
+    mobileSwapBtn.addEventListener('click', () => {
+        swapTexts();
+        closeMoreSheet();
+    });
+    mobileClearBtn.addEventListener('click', () => {
+        clearAll();
+        closeMoreSheet();
+    });
+
+    document.addEventListener('keydown', event => {
+        if (!settingsModal.classList.contains('hidden')) {
+            if (event.key === 'Escape') closeSettings();
+            else trapFocus(event, settingsModal);
+        } else if (!moreSheet.classList.contains('hidden')) {
+            if (event.key === 'Escape') closeMoreSheet();
+            else trapFocus(event, moreSheet);
         }
     });
 
-    modeToggle.addEventListener('click', toggleMode);
-    clearBtn.addEventListener('click', () => {
-        clearAll();
-        localStorage.removeItem('wtd_input_left');
-        localStorage.removeItem('wtd_input_right');
-    });
+    clearBtn.addEventListener('click', clearAll);
+    swapBtn.addEventListener('click', swapTexts);
+    syncScrollBtn.addEventListener('change', () => setSyncScrolling(syncScrollBtn.checked));
 
-    // Save on input changes
     inputLeft.addEventListener('input', saveToStorage);
     inputRight.addEventListener('input', saveToStorage);
-
-    // Paste logic
     inputLeft.addEventListener('paste', handlePaste);
     inputRight.addEventListener('paste', handlePaste);
-
-    // Copy logic - convert Markdown to rich text on Ctrl+C
-    function handleCopy(e) {
-        if (!copyAsRichText) return;
-
-        const selectedText = e.target instanceof HTMLTextAreaElement
-            ? e.target.value.slice(e.target.selectionStart, e.target.selectionEnd)
-            : window.getSelection().toString();
-        if (selectedText) {
-            e.preventDefault();
-            const html = marked.parse(selectedText);
-            e.clipboardData.setData('text/plain', selectedText);
-            e.clipboardData.setData('text/html', html);
-        }
-    }
     inputLeft.addEventListener('copy', handleCopy);
     inputRight.addEventListener('copy', handleCopy);
-
-    syncScrollBtn.addEventListener('change', () => {
-        isSyncScrolling = syncScrollBtn.checked;
-    });
-
-    swapBtn.addEventListener('click', () => {
-        const temp = inputLeft.value;
-        inputLeft.value = inputRight.value;
-        inputRight.value = temp;
-
-        // Trigger save and updates
-        inputLeft.dispatchEvent(new Event('input'));
-        inputRight.dispatchEvent(new Event('input'));
-
-        // If in diff mode, re-render
-        if (isDiffMode) {
-            renderDiff(inputLeft.value, inputRight.value);
-        }
-    });
-
-    const copyLeftBtn = document.getElementById('copy-left');
-    const copyRightBtn = document.getElementById('copy-right');
-
-    const copyToClipboard = async (text, button) => {
-        button.disabled = true;
-
-        try {
-            if (copyAsRichText) {
-                // Convert Markdown to HTML and copy both formats
-                const html = marked.parse(text);
-                const clipboardItem = new ClipboardItem({
-                    'text/plain': new Blob([text], { type: 'text/plain' }),
-                    'text/html': new Blob([html], { type: 'text/html' })
-                });
-                await navigator.clipboard.write([clipboardItem]);
-            } else {
-                await navigator.clipboard.writeText(text);
-            }
-            button.textContent = 'Copied!';
-        } catch (err) {
-            console.error('Failed to copy: ', err);
-            button.textContent = 'Error';
-        }
-
-        setTimeout(() => {
-            button.textContent = 'Copy';
-            button.disabled = false;
-        }, 2000);
-    };
-
-    copyLeftBtn.addEventListener('click', () => {
-        copyToClipboard(inputLeft.value, copyLeftBtn);
-    });
-
-    copyRightBtn.addEventListener('click', () => {
-        copyToClipboard(inputRight.value, copyRightBtn);
-    });
+    copyLeftBtn.addEventListener('click', () => copyToClipboard(inputLeft.value, copyLeftBtn));
+    copyRightBtn.addEventListener('click', () => copyToClipboard(inputRight.value, copyRightBtn));
 
     prevDiffBtn.addEventListener('click', () => {
-        if (totalDiffs === 0) return;
-        let newIndex = currentDiffIndex - 1;
-        if (newIndex < 0) newIndex = totalDiffs - 1; // Wrap to end
-        scrollToDiff(newIndex);
+        if (!totalDiffs) return;
+        scrollToDiff(currentDiffIndex <= 0 ? totalDiffs - 1 : currentDiffIndex - 1);
     });
-
     nextDiffBtn.addEventListener('click', () => {
-        if (totalDiffs === 0) return;
-        let newIndex = currentDiffIndex + 1;
-        if (newIndex >= totalDiffs) newIndex = 0; // Wrap to start
-        scrollToDiff(newIndex);
+        if (!totalDiffs) return;
+        scrollToDiff(currentDiffIndex >= totalDiffs - 1 ? 0 : currentDiffIndex + 1);
     });
 
     diffLeft.addEventListener('scroll', handleScrollLeft);
+    diffLeft.addEventListener('scroll', () => { if (isDiffMode) requestAnimationFrame(updateMinimapViewport); });
     diffRight.addEventListener('scroll', handleScrollRight);
+    window.addEventListener('resize', () => {
+        if (!isDiffMode || mobileQuery.matches) return;
+        clearTimeout(window.minimapTimeout);
+        window.minimapTimeout = setTimeout(() => {
+            syncRowHeights();
+            updateMinimap();
+        }, 100);
+    });
+    mobileQuery.addEventListener('change', handleBreakpointChange);
 
-    // Setup DnD for both panes (can drop on the whole pane)
     setupDragAndDrop(paneLeft, inputLeft);
     setupDragAndDrop(paneRight, inputRight);
 });

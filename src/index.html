@@ -20,34 +20,52 @@
 <body>
     <div class="app-container">
         <header>
-            <h1>What's the Diff</h1>
+            <div class="brand-row">
+                <h1>What's the Diff</h1>
+                <button id="mobile-more-btn" class="btn secondary mobile-only" type="button"
+                    aria-haspopup="dialog" aria-controls="more-sheet"><span aria-hidden="true">•••</span> More</button>
+            </div>
             <div class="actions">
                 <div class="nav-controls hidden" id="nav-controls">
                     <span id="diff-counter">0/0</span>
-                    <button id="prev-diff" class="btn secondary" title="Previous Change">▲</button>
-                    <button id="next-diff" class="btn secondary" title="Next Change">▼</button>
+                    <button id="prev-diff" class="btn secondary" type="button" title="Previous Change"
+                        aria-label="Previous change">▲</button>
+                    <button id="next-diff" class="btn secondary" type="button" title="Next Change"
+                        aria-label="Next change">▼</button>
                 </div>
-                <label class="checkbox-label" title="Toggle Synchronized Scrolling">
+                <label class="checkbox-label desktop-control" title="Toggle Synchronized Scrolling">
                     <input type="checkbox" id="sync-scroll" checked>
                     <span class="checkbox-box"></span>
                     Sync Scroll
                 </label>
-                <button id="swap-btn" class="btn secondary" title="Swap Left and Right">⇄ Swap</button>
-                <div class="separator"></div>
-                <div class="mode-switch" id="mode-toggle">
-                    <span class="mode-option active" data-mode="edit">Edit Text</span>
-                    <span class="mode-option" data-mode="diff">View Diff</span>
+                <button id="swap-btn" class="btn secondary desktop-control" type="button"
+                    title="Swap Left and Right">⇄ Swap</button>
+                <div class="separator desktop-control"></div>
+                <div class="mode-switch" id="mode-toggle" role="group" aria-label="Display mode">
+                    <button class="mode-option active" type="button" data-mode="edit"
+                        aria-pressed="true">Edit Text</button>
+                    <button class="mode-option" type="button" data-mode="diff"
+                        aria-pressed="false">View Diff</button>
                     <div class="mode-slider"></div>
                 </div>
-                <button id="clear-btn" class="btn secondary">Clear All</button>
-                <button id="settings-btn" class="btn secondary" title="Settings">⚙ Settings</button>
+                <button id="clear-btn" class="btn secondary desktop-control" type="button">Clear All</button>
+                <button id="settings-btn" class="btn secondary desktop-control" type="button"
+                    title="Settings">⚙ Settings</button>
             </div>
         </header>
+
+        <div class="mobile-pane-switch mobile-only" id="mobile-pane-switch" role="group"
+            aria-label="Editor pane">
+            <button class="mobile-pane-option active" type="button" data-pane="left"
+                aria-pressed="true">Original</button>
+            <button class="mobile-pane-option" type="button" data-pane="right"
+                aria-pressed="false">Modified</button>
+        </div>
 
         <main class="split-view">
             <div class="pane left-pane" id="pane-left">
                 <div class="pane-header">
-                    <span>Original (Drag file here)</span>
+                    <span>Original<span class="desktop-hint"> (Drag file here)</span></span>
                     <button id="copy-left" class="btn icon-btn" tabindex="-1" title="Copy Original Text">Copy</button>
                 </div>
                 <div class="pane-content editor-mode">
@@ -58,7 +76,7 @@
 
             <div class="pane right-pane" id="pane-right">
                 <div class="pane-header">
-                    <span>Modified (Drag file here)</span>
+                    <span>Modified<span class="desktop-hint"> (Drag file here)</span></span>
                     <button id="copy-right" class="btn icon-btn" tabindex="-1" title="Copy Modified Text">Copy</button>
                 </div>
                 <div class="pane-content editor-mode">
@@ -66,6 +84,7 @@
                 </div>
                 <div class="pane-content diff-mode hidden" id="diff-right"></div>
             </div>
+            <section class="unified-diff hidden" id="diff-unified" aria-label="Unified text differences"></section>
             <div class="minimap" id="minimap"></div>
         </main>
 
@@ -75,10 +94,10 @@
 
         <!-- Settings Modal -->
         <div class="modal-overlay hidden" id="settings-modal">
-            <div class="modal">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
                 <div class="modal-header">
-                    <h2>Settings</h2>
-                    <button class="modal-close" id="settings-close">×</button>
+                    <h2 id="settings-title">Settings</h2>
+                    <button class="modal-close" id="settings-close" type="button" aria-label="Close settings">×</button>
                 </div>
                 <div class="modal-content">
                     <label class="checkbox-label">
@@ -93,6 +112,27 @@
                     </label>
                     <p class="setting-description">When enabled, pasted rich text (from web pages, Word, etc.) will be
                         converted to Markdown. When disabled, only plain text is used.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="sheet-overlay hidden" id="more-sheet">
+            <div class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="more-sheet-title">
+                <div class="modal-header">
+                    <h2 id="more-sheet-title">More actions</h2>
+                    <button class="modal-close" id="more-sheet-close" type="button"
+                        aria-label="Close more actions">×</button>
+                </div>
+                <div class="sheet-content">
+                    <button id="mobile-swap-btn" class="sheet-action" type="button">
+                        <span class="sheet-action-icon" aria-hidden="true">⇄</span><span>Swap texts</span>
+                    </button>
+                    <button id="mobile-settings-btn" class="sheet-action" type="button">
+                        <span class="sheet-action-icon" aria-hidden="true">⚙</span><span>Settings</span>
+                    </button>
+                    <button id="mobile-clear-btn" class="sheet-action danger" type="button">
+                        <span class="sheet-action-icon" aria-hidden="true">×</span><span>Clear all text</span>
+                    </button>
                 </div>
             </div>
         </div>

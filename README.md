@@ -12,6 +12,7 @@ A client-side text comparison tool for quickly spotting differences between two 
 - Swap panes and one-click copy
 - Local autosave via `localStorage`
 - Optional rich text <-> Markdown copy/paste
+- Mobile layout support
 
 ## Settings
 - `Paste rich text as Markdown`: converts pasted HTML/rich text (web pages, docs, etc.) into Markdown on paste.
@@ -29,7 +30,7 @@ A client-side text comparison tool for quickly spotting differences between two 
 - [`marked`](https://github.com/markedjs/marked) for Markdown -> HTML copy conversion
 
 ## Project Files
-- `index.html` - app layout and CDN dependencies
+- `index.html` - app layout and runtime dependencies
 - `app.js` - diff logic and interactions
 - `style.css` - main UI styles
 - `minimap.css` - minimap styles
