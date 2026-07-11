@@ -6,7 +6,7 @@ test('basic diff flow works', async ({ page }) => {
   await page.fill('#input-left', 'line1\nline2\nline3');
   await page.fill('#input-right', 'line1\nline two\nline3\nline4');
 
-  await page.click('#mode-toggle');
+  await page.click('[data-mode="diff"]');
 
   await expect(page.locator('#diff-left')).toBeVisible();
   await expect(page.locator('#diff-right')).toBeVisible();
