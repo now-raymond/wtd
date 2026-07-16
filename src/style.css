@@ -175,8 +175,8 @@ header h1 {
 
 .separator {
     width: 1px;
+    height: 24px;
     background-color: var(--border-color);
-    margin: 0 0.5rem;
 }
 
 /* Checkbox Styles */
@@ -598,10 +598,6 @@ footer {
 
     .actions {
         gap: 0.5rem;
-    }
-
-    .separator {
-        margin: 0 0.15rem;
     }
 
     .btn {
